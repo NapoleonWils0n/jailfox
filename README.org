@@ -1,5 +1,5 @@
 #+STARTUP: content
-* freebsd thick jail
+* Jailfox - Firefox in a Freebsd Jail
 ** freebsd handbook jails
 
 [[https://docs.freebsd.org/en/books/handbook/jails/]]
