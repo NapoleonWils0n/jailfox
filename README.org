@@ -12,8 +12,6 @@ enable jails
 
 #+begin_src sh
 sudo sysrc jail_enable="YES"
-sudo sysrc jail_parallel_start="YES"
-sudo sysrc jail_list="classic"
 sudo sysrc cloned_interfaces="lo1"
 sudo sysrc ifconfig_lo1_aliases="inet 10.10.0.1-12/24"
 #+end_src
@@ -24,13 +22,9 @@ sudo sysrc ifconfig_lo1_aliases="inet 10.10.0.1-12/24"
 
 #+begin_src conf
 jail_enable="YES"
-#jail_parallel_start="YES"
-#jail_list="classic"
 cloned_interfaces="lo1"
 ifconfig_lo1_aliases="inet 10.10.0.1-12/24"
 #+end_src
-
-With jail_parallel_start, all configured jails will be started in the background.
 
 ** jail directory tree
 
