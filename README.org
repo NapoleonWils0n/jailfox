@@ -437,32 +437,55 @@ sudo pkg install zsh zsh-completions zsh-syntax-highlighting
 #+begin_src conf
 # ~/.zshenv
 
-# Path
-typeset -U PATH path
-path=("$path[@]")
-export PATH
+# for ZSH
+case "$OSTYPE" in
+  freebsd*)
+  # Path
+  typeset -U PATH path
+  path=("$path[@]")
+  export PATH
+
+  # XDG_RUNTIME_DIR
+  export XDG_RUNTIME_DIR=/var/run/xdg/"${USER}"
+
+  # wayland - uncomment to use wayland
+  export WAYLAND_DISPLAY=wayland-0
+  export QT_QPA_PLATFORM=wayland
+  export GDK_BACKEND=wayland
+  ;;
+  linux*)
+  typeset -U PATH path
+  path=("/opt/resolve/bin" "/bin" "/usr/bin" "$path[@]")
+  export PATH
+
+  # XDG_RUNTIME_DIR
+  export XDG_RUNTIME_DIR="/run/user/`id -u`"
+
+  # dummy-uvm.so for access to the gpu
+  export LD_PRELOAD="${HOME}"/.config/gpu/dummy-uvm.so
+
+  # wayland - uncomment to use wayland
+  #export WAYLAND_DISPLAY=wayland-0
+  #export QT_QPA_PLATFORM=wayland
+  #export GDK_BACKEND=wayland
+
+  # x11 - comment out to use wayland
+  export DISPLAY=:0
+  export QT_QPA_PLATFORM=xcb
+  export GDK_BACKEND=x11
+  ;;
+esac
 
 # xdg directories
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_HOME="$HOME/.local/share"
-export XDG_RUNTIME_DIR=/var/run/xdg/"${USER}"
 
 # qt5
 export QT_QPA_PLATFORMTHEME=qt5ct
-
-# wayland - uncomment to use wayland
-export WAYLAND_DISPLAY=wayland-0
-export QT_QPA_PLATFORM=wayland
-export GDK_BACKEND=wayland
-
-# consolekit       
-#export LIBSEAT_BACKEND=consolekit2
-
-# dbus
 #+end_src
 
-*** chsh
+*** chsh - change shell
 
 change the shell to zsh
 
@@ -549,8 +572,7 @@ sudo pkg install noto-basic noto-emoji
 [ $# -gt 0 ] || exit 1
 
 # run the wrapper-freebsd script
-wrapper-freebsd -a firefox "${@}"
-
+wrapper-freebsd -j classic -a firefox "${@}"
 #+end_src
 
 ***** shell config
@@ -587,7 +609,9 @@ usage () {
 # display help
 echo "\
 # script usage
-$(basename "$0") -u ${USER}"
+$(basename "$0") -j jail -a application -p on
+-p on = enable audio on the freebsd host for the jail
+"
 exit 2
 }
 
@@ -602,10 +626,12 @@ exit 2
 # getopts check the options passed to the script
 #===============================================================================
 
-while getopts ':a:h' opt
+while getopts ':j:a:p:h' opt
 do
   case ${opt} in
+     j) jail="${OPTARG}";;
      a) app="${OPTARG}";;
+     p) audio="${OPTARG}";;
      h) usage;;
      \?) usage "${INVALID_OPT_ERR} ${OPTARG}" 1>&2;;
      :) usage "${INVALID_OPT_ERR} ${OPTARG} ${REQ_ARG_ERR}" 1>&2;;
@@ -614,18 +640,35 @@ done
 shift $((OPTIND-1))
 
 #===============================================================================
-# run the application in the jail
+# start audio if -p on option is specified
 #===============================================================================
 
-# start pulseaudio
-#pulseaudio --start --daemonize 2>/dev/null
+# default audio off
+audio_default="off"
 
-# doas jexec into ubuntu and run the wrapper script to start the application
-doas jexec classic /usr/local/bin/wrapper-jail \
+# start audio
+audio () {
+pulseaudio --start --daemonize 2>/dev/null
+}
+
+# check if pulseaudio should be started
+case "${audio:=${audio_default}}" in
+    on) audio;;
+    off) echo 'off';;
+    ,*) usage;;
+esac
+
+
+#===============================================================================
+# doas jexec into the jail and run the wrapper script to start the application
+#===============================================================================
+
+doas jexec "${jail}" \
+/usr/local/bin/wrapper-jail \
 -u "${USER}" \
 -d "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS}" \
 -a "${app}" \
-"${@}"
+"$@"
 #+end_src
 **** desktop entries
 
@@ -685,7 +728,7 @@ Name=Jailfox
 Comment=Browse the World Wide Web
 GenericName=Web Browser
 Keywords=Internet;WWW;Browser;Web;Explorer
-Exec=sh -c 'wrapper-freebsd -a firefox %U'
+Exec=sh -c 'wrapper-freebsd -j classic -a firefox %U'
 Terminal=false
 Type=Application
 Icon=firefox

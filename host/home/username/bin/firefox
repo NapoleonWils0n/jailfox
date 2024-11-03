@@ -4,4 +4,4 @@
 [ $# -gt 0 ] || exit 1
 
 # run the wrapper-freebsd script
-wrapper-freebsd -a firefox "${@}"
+wrapper-freebsd -j classic -a firefox "${@}"
